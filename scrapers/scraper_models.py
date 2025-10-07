@@ -406,10 +406,11 @@ class OpenRouterPerfectAllPeriodsScraper:
                             model_data['author_url'] = f"https://openrouter.ai/{author}"
                             
                             # Add logo URL using Google favicon service
-                            model_data['logo_url'] = self.get_logo_url(author)
+                            logo_url = self.get_logo_url(author)
+                            model_data['logo_url'] = logo_url
                             
                             models.append(model_data)
-                            print(f"INFO: Model {rank}: {model_name} - {trend_info['icon']} {trend_percentage} ({trend_info['direction']}) - PERFECTLY DETECTED")
+                            print(f"INFO: Model {rank}: {model_name} - {trend_info['icon']} {trend_percentage} ({trend_info['direction']}) - Logo: {logo_url[:50]}... - PERFECTLY DETECTED")
                 
                 except Exception as e:
                     print(f"WARNING: Error parsing rank {line}: {e}")
@@ -782,6 +783,14 @@ class OpenRouterPerfectAllPeriodsScraper:
                     model['time_period'] = time_period
                     model['scraped_at'] = datetime.now().isoformat()
                     all_models.append(model)
+            
+            # Debug: Print sample data being sent to Supabase
+            if all_models:
+                sample_model = all_models[0]
+                print(f"DEBUG: Sample model data being sent to Supabase:")
+                print(f"DEBUG: - Author: {sample_model.get('author', 'MISSING')}")
+                print(f"DEBUG: - Logo URL: {sample_model.get('logo_url', 'MISSING')}")
+                print(f"DEBUG: - All keys: {list(sample_model.keys())}")
             
             # Insert data into Supabase
             result = self.supabase.table('openrouter_models').insert(all_models).execute()
