@@ -23,6 +23,7 @@ CREATE TABLE openrouter_models (
   trend_color TEXT,
   model_url TEXT,
   author_url TEXT,
+  logo_url TEXT,
   time_period TEXT,
   scraped_at TIMESTAMP WITH TIME ZONE
 );
@@ -70,7 +71,7 @@ The scrapers will automatically run on GitHub Actions and save data to your Supa
 ## Data Structure
 
 ### Models Data
-- rank, model_name, author, tokens, trend_percentage, trend_direction, trend_icon, trend_color, model_url, author_url, time_period, scraped_at
+- rank, model_name, author, tokens, trend_percentage, trend_direction, trend_icon, trend_color, model_url, author_url, logo_url, time_period, scraped_at
 
 ### Apps Data  
 - rank, app_name, description, tokens, is_new, app_url, domain, image_url, time_period, scraped_at

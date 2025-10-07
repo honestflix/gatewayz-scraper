@@ -9,6 +9,7 @@ import json
 import time
 import re
 import os
+import urllib.parse
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -404,6 +405,9 @@ class OpenRouterPerfectAllPeriodsScraper:
                             model_data['model_url'] = self.get_model_url(model_name, author, model_urls_cache)
                             model_data['author_url'] = f"https://openrouter.ai/{author}"
                             
+                            # Add logo URL using Google favicon service
+                            model_data['logo_url'] = self.get_logo_url(author)
+                            
                             models.append(model_data)
                             print(f"INFO: Model {rank}: {model_name} - {trend_info['icon']} {trend_percentage} ({trend_info['direction']}) - PERFECTLY DETECTED")
                 
@@ -600,6 +604,79 @@ class OpenRouterPerfectAllPeriodsScraper:
             url_name = model_name.lower().replace(' ', '-').replace('(', '').replace(')', '')
             return f"https://openrouter.ai/{author}/{url_name}"
     
+    def get_logo_url(self, author):
+        """Generate Google favicon URL for model author"""
+        try:
+            # Map common authors to their actual domains for better favicon results
+            author_domain_map = {
+                'OpenAI': 'openai.com',
+                'Anthropic': 'anthropic.com',
+                'Google': 'google.com',
+                'Meta': 'meta.com',
+                'Microsoft': 'microsoft.com',
+                'Cohere': 'cohere.com',
+                'Mistral AI': 'mistral.ai',
+                'Hugging Face': 'huggingface.co',
+                'Stability AI': 'stability.ai',
+                'ElevenLabs': 'elevenlabs.io',
+                'Perplexity': 'perplexity.ai',
+                'DeepSeek': 'deepseek.com',
+                'Qwen': 'qwenlm.com',
+                'Claude': 'anthropic.com',
+                'GPT': 'openai.com',
+                'Gemini': 'google.com',
+                'Llama': 'meta.com',
+                'PaLM': 'google.com',
+                'Vicuna': 'lmsys.org',
+                'Alpaca': 'crfm.stanford.edu',
+                'WizardLM': 'wizardlm.ai',
+                'CodeLlama': 'meta.com',
+                'Falcon': 'falconllm.tii.ae',
+                'MPT': 'mosaicml.com',
+                'RedPajama': 'together.ai',
+                'OpenAssistant': 'open-assistant.io',
+                'Dolly': 'databricks.com',
+                'Cerebras': 'cerebras.net',
+                'Baichuan': 'baichuan-ai.com',
+                'Zhipu': 'zhipuai.cn',
+                'GLM': 'zhipuai.cn',
+                'ChatGLM': 'zhipuai.cn',
+                'InternLM': 'internlm.org',
+                'Qwen': 'qwenlm.com',
+                'Yi': '01.ai',
+                'DeepSeek': 'deepseek.com',
+                'Moonshot': 'moonshot.cn',
+                'MiniMax': 'minimax.chat',
+                'Abab': 'abab.ai',
+                'Baichuan': 'baichuan-ai.com',
+                'Zhipu': 'zhipuai.cn',
+                'GLM': 'zhipuai.cn',
+                'ChatGLM': 'zhipuai.cn',
+                'InternLM': 'internlm.org',
+                'Qwen': 'qwenlm.com',
+                'Yi': '01.ai',
+                'DeepSeek': 'deepseek.com',
+                'Moonshot': 'moonshot.cn',
+                'MiniMax': 'minimax.chat',
+                'Abab': 'abab.ai'
+            }
+            
+            # Get the domain for the author
+            domain = author_domain_map.get(author, f"{author.lower().replace(' ', '').replace('-', '')}.com")
+            
+            # Generate Google favicon URL
+            # Format: https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://domain.com&size=256
+            encoded_domain = urllib.parse.quote(f"https://{domain}", safe='')
+            favicon_url = f"https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url={encoded_domain}&size=256"
+            
+            print(f"INFO: Generated favicon URL for {author}: {favicon_url}")
+            return favicon_url
+            
+        except Exception as e:
+            print(f"WARNING: Error generating favicon URL for {author}: {e}")
+            # Fallback to a generic favicon
+            return "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://openrouter.ai&size=256"
+    
     def scrape_all_time_periods(self, max_models=20):
         """
         Scrape all time periods from the OpenRouter website
@@ -672,7 +749,7 @@ class OpenRouterPerfectAllPeriodsScraper:
         try:
             with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
                 fieldnames = ['rank', 'model_name', 'author', 'tokens', 'trend_percentage', 
-                            'trend_direction', 'trend_icon', 'trend_color', 'model_url', 'author_url', 'time_period', 'scraped_at']
+                            'trend_direction', 'trend_icon', 'trend_color', 'model_url', 'author_url', 'logo_url', 'time_period', 'scraped_at']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 
                 writer.writeheader()
