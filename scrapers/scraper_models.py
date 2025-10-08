@@ -764,7 +764,7 @@ class OpenRouterPerfectAllPeriodsScraper:
             print(f"ERROR: Error saving to CSV: {e}")
     
     def save_to_supabase(self):
-        """Save all scraped data to Supabase"""
+        """Save all scraped data to Supabase using upsert strategy"""
         if not self.all_data:
             print("ERROR: No data to save")
             return False
@@ -774,9 +774,9 @@ class OpenRouterPerfectAllPeriodsScraper:
             return False
         
         try:
-            print("INFO: Saving data to Supabase...")
+            print("INFO: Saving data to Supabase using upsert strategy...")
             
-            # Prepare data for insertion
+            # Prepare data for upsert
             all_models = []
             for time_period, models in self.all_data.items():
                 for model in models:
@@ -792,14 +792,45 @@ class OpenRouterPerfectAllPeriodsScraper:
                 print(f"DEBUG: - Logo URL: {sample_model.get('logo_url', 'MISSING')}")
                 print(f"DEBUG: - All keys: {list(sample_model.keys())}")
             
-            # Insert data into Supabase
-            result = self.supabase.table('openrouter_models').insert(all_models).execute()
+            # Use upsert to update existing records or insert new ones
+            # This will update based on the combination of model_name, author, and time_period
+            result = self.supabase.table('openrouter_models').upsert(
+                all_models,
+                on_conflict='model_name,author,time_period'
+            ).execute()
             
-            print(f"SUCCESS: {len(all_models)} models saved to Supabase")
+            print(f"SUCCESS: {len(all_models)} models upserted to Supabase")
             return True
             
         except Exception as e:
             print(f"ERROR: Error saving to Supabase: {e}")
+            # If upsert fails due to missing unique constraint, try alternative approach
+            if "unique constraint" in str(e).lower() or "conflict" in str(e).lower():
+                print("INFO: Upsert failed, trying delete and insert approach...")
+                return self._save_with_delete_and_insert(all_models)
+            return False
+    
+    def _save_with_delete_and_insert(self, all_models):
+        """Alternative save method: delete existing data for current time periods and insert new data"""
+        try:
+            # Get unique time periods from the data
+            time_periods = list(set(model['time_period'] for model in all_models))
+            
+            print(f"INFO: Deleting existing data for time periods: {time_periods}")
+            
+            # Delete existing data for these time periods
+            for time_period in time_periods:
+                delete_result = self.supabase.table('openrouter_models').delete().eq('time_period', time_period).execute()
+                print(f"INFO: Deleted existing data for {time_period}")
+            
+            # Insert new data
+            result = self.supabase.table('openrouter_models').insert(all_models).execute()
+            
+            print(f"SUCCESS: {len(all_models)} models saved to Supabase (delete and insert)")
+            return True
+            
+        except Exception as e:
+            print(f"ERROR: Error in delete and insert approach: {e}")
             return False
     
     def save_to_json(self, filename=None):

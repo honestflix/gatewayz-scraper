@@ -935,7 +935,7 @@ class OpenRouterAppsScraper:
             print(f"ERROR: Error saving apps data to JSON: {e}")
 
     def save_to_supabase(self, apps_data, time_period="Today"):
-        """Save apps data to Supabase"""
+        """Save apps data to Supabase using upsert strategy"""
         if not apps_data:
             print("ERROR: No apps data to save")
             return False
@@ -945,21 +945,48 @@ class OpenRouterAppsScraper:
             return False
         
         try:
-            print(f"INFO: Saving {len(apps_data)} apps to Supabase...")
+            print(f"INFO: Saving {len(apps_data)} apps to Supabase using upsert strategy...")
             
-            # Prepare data for insertion
+            # Prepare data for upsert
             for app in apps_data:
                 app['time_period'] = time_period
                 app['scraped_at'] = datetime.now().isoformat()
             
-            # Insert data into Supabase
-            result = self.supabase.table('openrouter_apps').insert(apps_data).execute()
+            # Use upsert to update existing records or insert new ones
+            # This will update based on the combination of app_name and time_period
+            result = self.supabase.table('openrouter_apps').upsert(
+                apps_data,
+                on_conflict='app_name,time_period'
+            ).execute()
             
-            print(f"SUCCESS: {len(apps_data)} apps saved to Supabase")
+            print(f"SUCCESS: {len(apps_data)} apps upserted to Supabase")
             return True
             
         except Exception as e:
             print(f"ERROR: Error saving to Supabase: {e}")
+            # If upsert fails due to missing unique constraint, try alternative approach
+            if "unique constraint" in str(e).lower() or "conflict" in str(e).lower():
+                print("INFO: Upsert failed, trying delete and insert approach...")
+                return self._save_apps_with_delete_and_insert(apps_data, time_period)
+            return False
+    
+    def _save_apps_with_delete_and_insert(self, apps_data, time_period):
+        """Alternative save method: delete existing data for current time period and insert new data"""
+        try:
+            print(f"INFO: Deleting existing apps data for time period: {time_period}")
+            
+            # Delete existing data for this time period
+            delete_result = self.supabase.table('openrouter_apps').delete().eq('time_period', time_period).execute()
+            print(f"INFO: Deleted existing apps data for {time_period}")
+            
+            # Insert new data
+            result = self.supabase.table('openrouter_apps').insert(apps_data).execute()
+            
+            print(f"SUCCESS: {len(apps_data)} apps saved to Supabase (delete and insert)")
+            return True
+            
+        except Exception as e:
+            print(f"ERROR: Error in delete and insert approach: {e}")
             return False
     
     def save_to_structured_json(self, time_period_data, filename=None):

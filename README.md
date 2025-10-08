@@ -25,7 +25,8 @@ CREATE TABLE openrouter_models (
   author_url TEXT,
   logo_url TEXT,
   time_period TEXT,
-  scraped_at TIMESTAMP WITH TIME ZONE
+  scraped_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(model_name, author, time_period)
 );
 ```
 
@@ -42,7 +43,8 @@ CREATE TABLE openrouter_apps (
   domain TEXT,
   image_url TEXT,
   time_period TEXT,
-  scraped_at TIMESTAMP WITH TIME ZONE
+  scraped_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(app_name, time_period)
 );
 ```
 
@@ -67,6 +69,19 @@ The workflow is configured to run every 6 hours automatically. You can also trig
 ## Usage
 
 The scrapers will automatically run on GitHub Actions and save data to your Supabase database. No manual intervention required.
+
+## Data Update Strategy
+
+The scrapers use an **upsert strategy** to prevent duplicate data:
+
+- **Models**: Updates existing records based on `(model_name, author, time_period)` combination
+- **Apps**: Updates existing records based on `(app_name, time_period)` combination
+
+This ensures that:
+- Each time period only contains the latest ranking data
+- No duplicate entries are created
+- Historical data is preserved with updated timestamps
+- Database size remains manageable
 
 ## Data Structure
 
